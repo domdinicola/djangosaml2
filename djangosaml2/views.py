@@ -370,7 +370,8 @@ def logout(request, config_loader_path=None):
             'The session does not contain the subject id for user %s',
             request.user)
 
-    result = client.global_logout(subject_id)
+    # custom behavior
+    result = client.global_logout(subject_id, sign=getattr(settings, 'SAML_SIGNED_LOGOUT', False))
 
     state.sync()
 
@@ -431,9 +432,10 @@ def do_logout_service(request, data, binding, config_loader_path=None, next_page
 
     if 'SAMLResponse' in data:  # we started the logout
         logger.debug('Receiving a logout response from the IdP')
-        response = client.parse_logout_request_response(data['SAMLResponse'], binding)
+        # custom behavior
+        # response = client.parse_logout_request_response(data['SAMLResponse'], binding)
         state.sync()
-        return finish_logout(request, response, next_page=next_page)
+        return finish_logout(request, None, next_page=next_page)
 
     elif 'SAMLRequest' in data:  # logout started by the IdP
         logger.debug('Receiving a logout request from the IdP')
@@ -459,15 +461,16 @@ def do_logout_service(request, data, binding, config_loader_path=None, next_page
 
 
 def finish_logout(request, response, next_page=None):
-    if response and response.status_ok():
-        if next_page is None and hasattr(settings, 'LOGOUT_REDIRECT_URL'):
-            next_page = settings.LOGOUT_REDIRECT_URL
-        logger.debug('Performing django logout with a next_page of %s',
-                     next_page)
-        return django_logout(request, next_page=next_page)
-    else:
-        logger.error('Unknown error during the logout')
-        return render(request, "djangosaml2/logout_error.html", {})
+    # custom behavior
+    # if response and response.status_ok():
+    if next_page is None and hasattr(settings, 'LOGOUT_REDIRECT_URL'):
+        next_page = settings.LOGOUT_REDIRECT_URL
+    logger.debug('Performing django logout with a next_page of %s',
+                 next_page)
+    return django_logout(request, next_page=next_page)
+    # else:
+    #     logger.error('Unknown error during the logout')
+    #     return render(request, "djangosaml2/logout_error.html", {})
 
 
 def metadata(request, config_loader_path=None, valid_for=None):
